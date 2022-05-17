@@ -14,8 +14,8 @@ while(True):
         # note that the video window must be highlighted!
         break
 
-cap.release()
-cv2.destroyAllWindows()
+#cap.release()
+#cv2.destroyAllWindows()
 # the following is necessary on the mac,
 # maybe not on other platforms:
-cv2.waitKey(1)
+#cv2.waitKey(1)

@@ -4,6 +4,7 @@ import rclpy
 # import the ROS2 python libraries
 from rclpy.node import Node
 from std_msgs.msg import String
+from custom_interfaces import Detection
 
 # Other Imports
 import numpy as np
@@ -28,7 +29,7 @@ class HumanDetector(Node):
         # call the class constructor
         super().__init__('human_detector')
         # create the publisher object
-        self.publisher_ = self.create_publisher(String, 'detections', 10)
+        self.publisher_ = self.create_publisher(Detection, 'detections', 10)
         # define the timer period for 0.5 seconds
         self.timer_period = 0.5
         self.timer = self.create_timer(self.timer_period, self.detect_human)
@@ -37,31 +38,35 @@ class HumanDetector(Node):
     def detect_human(self):
         # print the data
         global cap
-        detection = String()
-        detection.data = "test string"
+        detection = Detection()
 
         # --- INSERT DETECTION ALGO HERE ---
         # Capture frame-by-frame
         ret, frame = cap.read()
-        print(frame)
-        cv2.imshow('frame', frame)
-	
+        print(type(frame))
+        #cv2.imshow('frame', frame)
+
         frame = cv2.resize(frame, (640, 480))
 
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)  # for faster detection
         boxes, weights = hog.detectMultiScale(frame, winStride=(8, 8))
 
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            return
         if self.show_video == True:
             for (xA, yA, xB, yB) in boxes:
                 # display the detected boxes in the colour picture
                 cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
-        
-
+            cv2.imshow('l', np.array(frame, dtype=np.uint8))
         # Publish detection here
 
         # ---
-
-        self.get_logger().info(f'Sending detection')
+        if len(boxes) > 0:
+            detection.center_x = (xB-xA)//2
+            detection.center_y = (yB-yA)//2
+            detection.width = (xB-xA)
+            detection.height = (yB-yA)
+            self.get_logger().info(f'Sending detection')
         # Publishing the cmd_vel values to topipc
         self.publisher_.publish(detection)
 
