@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import time
  
 # initialize the HOG descriptor/person detector
 hog = cv2.HOGDescriptor()
@@ -31,16 +32,17 @@ while(True):
     boxes, weights = hog.detectMultiScale(frame, winStride=(8,8) )
 
     boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in boxes])
-
+    
     for (xA, yA, xB, yB) in boxes:
         # display the detected boxes in the colour picture
         cv2.rectangle(frame, (xA, yA), (xB, yB),
                           (0, 255, 0), 2)
     
     # Write the output video 
-    out.write(frame.astype('uint8'))
+    #out.write(frame.astype('uint8'))
     # Display the resulting frame
     cv2.imshow('frame',frame)
+    time.sleep(0.5)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
