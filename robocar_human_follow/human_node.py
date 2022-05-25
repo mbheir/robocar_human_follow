@@ -4,11 +4,12 @@ import rclpy
 # import the ROS2 python libraries
 from rclpy.node import Node
 from std_msgs.msg import String
-from custom_interfaces import Detection
+from custom_interfaces.msg import Detection
 
 # Other Imports
 import numpy as np
 import cv2
+import argparse
 
 
 # --- HOG DETECTOR ---
@@ -21,10 +22,14 @@ cv2.startWindowThread()
 # open webcam video stream
 cap = cv2.VideoCapture(0)
 
+# Parse input arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('--showVideo', action='store_true', help='whether to show video or not' )
+opt = parser.parse_args()
 
 class HumanDetector(Node):
 
-    def __init__(self, show_video=True):
+    def __init__(self, show_video=opt.showVideo):
         # Here we have the class constructor
         # call the class constructor
         super().__init__('human_detector')
@@ -43,7 +48,6 @@ class HumanDetector(Node):
         # --- INSERT DETECTION ALGO HERE ---
         # Capture frame-by-frame
         ret, frame = cap.read()
-        print(type(frame))
         #cv2.imshow('frame', frame)
 
         frame = cv2.resize(frame, (640, 480))
