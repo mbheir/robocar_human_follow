@@ -57,20 +57,21 @@ class HumanDetector(Node):
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
+        for (xA, yA, xB, yB) in boxes:
+            cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
         if self.show_video == True:
-            for (xA, yA, xB, yB) in boxes:
                 # display the detected boxes in the colour picture
-                cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
             cv2.imshow('l', np.array(frame, dtype=np.uint8))
         # Publish detection here
 
         # ---
         if len(boxes) > 0:
-            detection.center_x = (xB-xA)//2
-            detection.center_y = (yB-yA)//2
-            detection.width = (xB-xA)
-            detection.height = (yB-yA)
-            self.get_logger().info(f'Sending detection')
+            detection.center_x = int((xB-xA)//2)
+            detection.center_y = int((yB-yA)//2)
+            detection.width = int(xB-xA)
+            detection.height = int(yB-yA)
+            self.get_logger().info(f"Detection (x,y) = ({detection.center_x},{detection.center_y})  \tBox (width,height) = ({detection.width},{detection.height}))")
+            #self.get_logger().info(f"Box (width,height) = ({detection.width},{detection.height})")
         # Publishing the cmd_vel values to topipc
         self.publisher_.publish(detection)
 
