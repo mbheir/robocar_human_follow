@@ -16,7 +16,7 @@ class PID_Node(Node):
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
         # create the subscriber object
         self.subscriber = self.create_subscription(
-            LaserScan, '/', self.move_turtlebot, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
+            Detection, '/detections', self.detection_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         # prevent unused variable warning
         self.subscriber
         # define the timer period for 0.5 seconds
@@ -28,7 +28,7 @@ class PID_Node(Node):
         self.cmd = Twist()
         self.timer = self.create_timer(self.timer_period, self.motion)
 
-    def move_turtlebot(self, msg):
+    def detection_callback(self, msg):
         # Save the frontal laser scan info at 0°
         self.laser_forward = msg.ranges[180]
         self.laser_right = msg.ranges[90]
