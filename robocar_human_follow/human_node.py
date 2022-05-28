@@ -11,21 +11,60 @@ import numpy as np
 import cv2
 import argparse
 
+# Import YOLOv5 Stuff
+from elements.yolo import OBJ_DETECTION
 
-# --- HOG DETECTOR ---
-# initialize the HOG descriptor/person detector
-hog = cv2.HOGDescriptor()
-hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+# Define YOLO Network
+Object_classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+                  'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+                  'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+                  'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+                  'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+                  'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+                  'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+                  'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
+                  'hair drier', 'toothbrush']
+Object_colors = list(np.random.rand(80, 3)*255)
+Object_detector = OBJ_DETECTION('weights/yolov5s.pt', Object_classes)
 
-cv2.startWindowThread()
+
+def gstreamer_pipeline(
+    capture_width=1280,
+    capture_height=720,
+    display_width=1280,
+    display_height=720,
+    framerate=60,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc ! "
+        "video/x-raw(memory:NVMM), "
+        "width=(int)%d, height=(int)%d, "
+        "format=(string)NV12, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink"
+        % (
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
+
 
 # open webcam video stream
 cap = cv2.VideoCapture(0)
 
 # Parse input arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--showVideo', action='store_true', help='whether to show video or not' )
+parser.add_argument('--showVideo', action='store_true',
+                    help='whether to show video or not')
 opt = parser.parse_args()
+
 
 class HumanDetector(Node):
 
@@ -35,45 +74,68 @@ class HumanDetector(Node):
         super().__init__('human_detector')
         # create the publisher object
         self.publisher_ = self.create_publisher(Detection, 'detections', 10)
-        # define the timer period for 0.5 seconds
-        self.timer_period = 0.5
-        self.timer = self.create_timer(self.timer_period, self.detect_human)
         self.show_video = show_video
+        self.x_rez = 640
+        self.y_rez = 480
 
     def detect_human(self):
         # print the data
-        global cap
-        detection = Detection()
+        if cap.isOpened():
+            # Open window to show video
+            if self.show_video:
+                window_handle = cv2.namedWindow(
+                    "CSI Camera", cv2.WINDOW_AUTOSIZE)
+            while True:
+                # Read from camera and perform YOLO detection
+                ret, frame = cap.read()
+                if ret:
+                    # detection process
+                    objs = Object_detector.detect(frame)
+                    max_box_size = 0
+                    detection = None
+                    for obj in objs:
+                        label = obj['label']
+                        # Check for person
+                        if label == 'person':
+                            score = obj['score']
+                            [(xmin, ymin), (xmax, ymax)] = obj['bbox']
+                            dx = xmax - xmin
+                            dy = ymax - ymin
+                            if dx*dy > max_box_size:
+                                max_box_size = dx*dy
+                                detection = Detection()
+                                detection.center_x = xmin + dx//2 - self.x_rez//2
+                                detection.center_y = ymin + dy//2 - self.y_rez//2
+                                detection.width = dx
+                                detection.height = dy
+                                sxmin,sxmax,symin,symax = xmin,xmax,ymin,ymax 
+                # Handle detection
+                if detection != None:
+                    self.get_logger().info(
+                        f"Detection (x,y) = ({detection.center_x},{detection.center_y})  \tBox (width,height) = ({detection.width},{detection.height}))")
 
-        # --- INSERT DETECTION ALGO HERE ---
-        # Capture frame-by-frame
-        ret, frame = cap.read()
-        #cv2.imshow('frame', frame)
+                    # Publish to topic
+                    self.publisher_.publish(detection)
 
-        frame = cv2.resize(frame, (640, 480))
+                    # reset detection
+                    detection = None
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)  # for faster detection
-        boxes, weights = hog.detectMultiScale(frame, winStride=(8, 8))
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            return
-        for (xA, yA, xB, yB) in boxes:
-            cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
-        if self.show_video == True:
-                # display the detected boxes in the colour picture
-            cv2.imshow('l', np.array(frame, dtype=np.uint8))
-        # Publish detection here
-
-        # ---
-        if len(boxes) > 0:
-            detection.center_x = int((xB-xA)//2)
-            detection.center_y = int((yB-yA)//2)
-            detection.width = int(xB-xA)
-            detection.height = int(yB-yA)
-            self.get_logger().info(f"Detection (x,y) = ({detection.center_x},{detection.center_y})  \tBox (width,height) = ({detection.width},{detection.height}))")
-            #self.get_logger().info(f"Box (width,height) = ({detection.width},{detection.height})")
-        # Publishing the cmd_vel values to topipc
-        self.publisher_.publish(detection)
+                    # Plotting to Display (for debug information, not important)
+                    color = Object_colors[Object_classes.index('person')]
+                    frame = cv2.rectangle(
+                        frame, (sxmin, symin), (sxmax, symax), color, 2)
+                    frame = cv2.putText(frame, f'person ({str(score)})', (
+                        sxmin, symin), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 1, cv2.LINE_AA)
+                # Display detections
+                if self.show_video:
+                    cv2.imshow("CSI Camera", frame)
+                    keyCode = cv2.waitKey(30)
+                    if keyCode == ord('q'):
+                        break
+            cap.release()
+            cv2.destroyAllWindows()
+        else:
+            print("Unable to open camera")
 
 
 def main(args=None):
@@ -82,7 +144,7 @@ def main(args=None):
 
     human_detector = HumanDetector()
     # pause the program execution, waits for a request to kill the node (ctrl+c)
-    rclpy.spin(human_detector)
+    human_detector.detect_human()
     # Explicity destroy the node
     human_detector.destroy_node()
     # shutdown the ROS communication
@@ -91,4 +153,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
+	
