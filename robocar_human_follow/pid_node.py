@@ -1,9 +1,22 @@
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import ReliabilityPolicy, QoSProfile
+from 
+
+
 #Custom message created for storing detections
 # detection.center_x
 # detection.center_y
 # detection.box_width
 # detection.box_height
+DETECTION_TOPIC_NAME = '/detections'
 from custom_interfaces.msg import Detection 
+
+# Check actuator package at https://gitlab.com/ucsd_robocar2/ucsd_robocar_actuator2_pkg/-/blob/master/ucsd_robocar_actuator2_pkg/vesc_twist_node.py
+ACTUATOR_TOPIC_NAME = '/cmd_vel'
+from geometry_msgs.msg import Twist
+
+
 
 
 class PID_Node(Node):
@@ -16,14 +29,11 @@ class PID_Node(Node):
         self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
         # create the subscriber object
         self.subscriber = self.create_subscription(
-            Detection, '/detections', self.detection_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
+            Detection, DETECTION_TOPIC_NAME, self.detection_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         # prevent unused variable warning
         self.subscriber
         # define the timer period for 0.5 seconds
         self.timer_period = 0.5
-        # define the variable to save the received info
-        self.laser_forward = 0
-        self.laser_right = 0
         # create a Twist message
         self.cmd = Twist()
         self.timer = self.create_timer(self.timer_period, self.motion)
