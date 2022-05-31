@@ -25,6 +25,9 @@ DETECTION_TOPIC_NAME = '/detections'
 ACTUATOR_TOPIC_NAME = '/cmd_vel'
 
 
+MAX_ANGLE = 1
+MAX_ERROR = 320
+
 class PID_Node(Node):
 
     def __init__(self):
@@ -45,14 +48,21 @@ class PID_Node(Node):
 
     def detection_callback(self, msg):
         # REACT TO A DETECTION HERE
-        self.x = msg.center_x
-        self.y = msg.center_y
+        cmd = Twist()
+        error = msg.center_x
+        
+        # K_p controls how aggressive we want the steering to be
+        K_p = 1/MAX_ERROR * MAX_ANGLE
+        steering_input = K_p * error
+        forward_input = 0.1
+        
         # This publishes the value to the terminal
-        self.get_logger().info(str(self.x))
-        # This code attaches the values from self.x into steering commands
-        #if self.x < 0:
-        #self.cmd.linear.x = 0.05
-            #self.cmd.angular.x = 3
+        self.get_logger().info("Following Target! Current angle={steering_input}")
+
+        # Publishing the cmd_vel values to topipc
+        cmd.linear.x = forward_input
+        cmd.angular.z = steering_input
+        self.publisher_.publish(cmd)
      
     
     def timer_callback(self):
@@ -61,9 +71,10 @@ class PID_Node(Node):
         # Publish driving command example
         cmd = Twist()
         cmd.linear.x = 0.1
+        cmd.angular.z = 1.0
 
         # Publishing the cmd_vel values to topipc
-        self.publisher_.publish(cmd)
+        #self.publisher_.publish(cmd)
 
 
 def main(args=None):
