@@ -14,8 +14,8 @@ from rclpy.qos import ReliabilityPolicy, QoSProfile
 # Custom message created for storing detections
 # detection.center_x
 # detection.center_y
-# detection.box_width
-# detection.box_height
+# detection.width
+# detection.height
 DETECTION_TOPIC_NAME = '/detections'
 
 # Check actuator package at https://urldefense.proofpoint.com/v2/url?u=https-3A__gitlab.com_ucsd-5Frobocar2_ucsd-5Frobocar-5Factuator2-5Fpkg_-2D_blob_master_ucsd-5Frobocar-5Factuator2-5Fpkg_vesc-5Ftwist-5Fnode.py&d=DwIGAg&c=-35OiAkTchMrZOngvJPOeA&r=RSuX6zNtjR8QyV9bB4B7mpCedielV-h7SUddZpjVIs8&m=dsI64WVV0y1GedjWrwkE-ZyyTn6UHEM3Y1l7i-W6jzU8qI-8zI3LNm1NE7Gn-nf2&s=ZK5G2HJG0eQ6j8moB7jqjsxUXnevRcu09GX80BHj_hg&e= 
@@ -57,12 +57,14 @@ class PID_Node(Node):
         forward_input = 0.1
         
         # This publishes the value to the terminal
-        self.get_logger().info("Following Target! Current angle={steering_input}")
+        self.get_logger().info(f"Following Target! Current angle={steering_input}")
 
         # Publishing the cmd_vel values to topipc
         cmd.linear.x = forward_input
         cmd.angular.z = steering_input
-        self.publisher_.publish(cmd)
+        
+        if msg.height < 460:
+        	self.publisher_.publish(cmd)
      
     
     def timer_callback(self):

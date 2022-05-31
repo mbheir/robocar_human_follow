@@ -29,11 +29,11 @@ Object_detector = OBJ_DETECTION('weights/yolov5s.pt', Object_classes)
 
 
 def gstreamer_pipeline(
-    capture_width=1280,
-    capture_height=720,
-    display_width=1280,
-    display_height=720,
-    framerate=60,
+    capture_width=640,
+    capture_height=480,
+    display_width=640,
+    display_height=480,
+    framerate=30,
     flip_method=0,
 ):
     return (
