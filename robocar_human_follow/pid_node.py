@@ -33,7 +33,7 @@ class PID_Node(Node):
     def __init__(self):
         # Here we have the class constructor
         # call the class constructor
-        super().__init__('exercise31')
+        super().__init__('human_node')
         # create the publisher object
         self.publisher_ = self.create_publisher(Twist, ACTUATOR_TOPIC_NAME, 10)
         # create the subscriber object
@@ -63,7 +63,7 @@ class PID_Node(Node):
         cmd.linear.x = forward_input
         cmd.angular.z = steering_input
         
-        if msg.height < 460:
+        if msg.height < 440:
         	self.publisher_.publish(cmd)
      
     
@@ -72,7 +72,7 @@ class PID_Node(Node):
 
         # Publish driving command example
         cmd = Twist()
-        cmd.linear.x = 0.1
+        cmd.linear.x = 0.15
         cmd.angular.z = 1.0
 
         # Publishing the cmd_vel values to topipc
